@@ -1,7 +1,107 @@
 ---
-title: "class-2024-06-20"
+title: "Bachelor Degrees in LA"
+execute: 
+  echo: false
 ---
 
-This is a Quarto website.
+```{r}
+#| label: setup
+#| echo: false
+#| message: false
+#| warning: false
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+library(tidyverse)
+library(tidycensus)
+library(leaflet)
+library(sf)
+library(tigris)
+```
+
+
+
+```{r}
+#| label: plot
+#| message: false
+#| warning: false
+
+# Suppress unnecessary messages
+options(tigris_use_cache = TRUE)
+options(tidyverse.quiet = TRUE)
+
+# Set your Census API key
+census_api_key("952c62727689fe8d4a2b8589b8694a9f11140c95", overwrite = TRUE)
+
+# Define the variables
+variables <- c(
+  total_population = "B15003_001",
+  bachelors_degree = "B15003_022"
+)
+
+# Download the data for Los Angeles County (FIPS code 06037)
+la_tracts <- get_acs(
+  geography = "tract",
+  variables = variables,
+  state = "CA",
+  county = "Los Angeles County",
+  year = 2020,
+  survey = "acs5",
+  output = "wide",
+  show_progress = FALSE
+)
+
+# Calculate the percentage of people with a bachelor's degree
+la_tracts <- la_tracts %>%
+  mutate(pct_bachelors_degree = (bachelors_degreeE / total_populationE) * 100) %>%
+  select(GEOID, NAME, pct_bachelors_degree)
+
+# View the first few rows of the data
+#head(la_tracts)
+
+# Get the geometries for census tracts in Los Angeles County
+tract_geometries <- get_acs(
+  geography = "tract",
+  variables = "B15003_001", # Any variable just to get the geometries
+  state = "CA",
+  county = "Los Angeles County",
+  year = 2020,
+  geometry = TRUE
+)
+
+# Join the geometries with your data
+la_tracts_geo <- tract_geometries %>%
+  left_join(la_tracts, by = "GEOID")
+
+# Transform to an sf object
+la_tracts_sf <- st_as_sf(la_tracts_geo)
+
+# Create a color palette
+palette <- colorNumeric(
+  palette = "YlGnBu",
+  domain = la_tracts_sf$pct_bachelors_degree
+)
+
+# Create the leaflet map
+leaflet(la_tracts_sf) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(
+    fillColor = ~palette(pct_bachelors_degree),
+    color = "#BDBDC3",
+    weight = 1,
+    opacity = 1,
+    fillOpacity = 0.7,
+    label = ~paste0(NAME.x, "<br>", "Bachelor's Degree: ", round(pct_bachelors_degree, 2), "%"),
+    highlightOptions = highlightOptions(
+      weight = 3,
+      color = "#666",
+      fillOpacity = 0.7,
+      bringToFront = TRUE
+    )
+  ) %>%
+  addLegend(
+    pal = palette,
+    values = ~pct_bachelors_degree,
+    title = "Percentage with Bachelor's Degree",
+    position = "bottomright"
+  )
+```
+
