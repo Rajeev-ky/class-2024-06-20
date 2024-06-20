@@ -1,6 +1,4 @@
 - source: project
   quarto-pub:
-    - id: ee6200bd-d01b-4b63-9812-9ed8120024d5
-      url: 'https://rajeev-ky.quarto.pub/class-2024-06-20'
     - id: 84fb84c0-7729-40b5-aeca-ed0a18594fd7
       url: 'https://rajeev-ky.quarto.pub/bachelors-degree-in-la'
